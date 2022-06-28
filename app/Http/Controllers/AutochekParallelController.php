@@ -71,22 +71,9 @@ class AutochekParallelController extends Controller
 
     public function mostOccuringLastWeek()
     {
-        //Get time range for last week in UNIX
-        $previous_week = strtotime("-1 week +1 day");
-        $start_week = strtotime("last sunday midnight",$previous_week);
 
-        //Get index of latest story
-        $maxIndex=Http::get("https://hacker-news.firebaseio.com/v0/maxitem.json?print=pretty");
-        //Serialize and parse to int
-        $maxIDString=(string)$maxIndex;
-        $maxIDint = (int)$maxIDString;
-
-        //Work backwards in groups of 100 till previous week is reached
-
-
-
-        $newStories=Http::get("https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty");
-        $items=json_decode($newStories->getBody());
+        $client = new Client();
+        //$response = $client->get('http://httpbin.org/get');
 
         $requests = function ($total) {
             $maxIndex=Http::get("https://hacker-news.firebaseio.com/v0/maxitem.json?print=pretty");
@@ -102,20 +89,25 @@ class AutochekParallelController extends Controller
         };
         $count=0;
         $string="";
-        $pool=new Pool($client, $requests(count($items)), [
-            'concurrency' => 5,
-            'fulfilled' => function (Response $response, $index) use (&$count,&$string) {
+        $pool=new Pool($client, $requests(1000), [
+            'concurrency' => 20,
+            'fulfilled' => function (Response $response, $index) use (&$string) {
                 // this is delivered each successful response
+                $previous_week = strtotime("-1 week +1 day");
+                $start_week = strtotime("last sunday midnight",$previous_week);
+
                 $item=json_decode($response->getBody());
+                echo "Hallel";
+                echo ($item->time>=$previous_week);
+
                 //Check if its a story
-                if((string)$item->type=="story")
+                if((int)$item->time>=$previous_week   )
                 {
                 //Extract title
                 //Check if title is defined
                 $isDefined = isset($item->title);
-                if($isDefined==1 &&$count<25){
+                if($isDefined==1){
                      $string .=(string)$item->title;
-                     $count++;
                 }
             }
             },
@@ -137,4 +129,6 @@ class AutochekParallelController extends Controller
         $wordCount = array_splice($wordCount, 0, 10);
         return $wordCount;
     }
+
+
 }
