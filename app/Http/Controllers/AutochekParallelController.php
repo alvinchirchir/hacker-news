@@ -241,13 +241,14 @@ class AutochekParallelController extends Controller
         //Asynchronously fetch stories while fetching the author
             $requests = function () use ($client,&$string,&$count,&$maxIndex) {
             $uri = 'https://hacker-news.firebaseio.com/v0/newstories.json?print=pretty';
-            while($count<2){
+            while($count<1){
                 yield function () use ($client,&$count,&$string,&$maxIndex) {
-                    return $client->getAsync("https://hacker-news.firebaseio.com/v0/item/$maxIndex.json?print=pretty")->then(function (Response $response) use (&$string,&$count) {
+                    return $client->getAsync("https://hacker-news.firebaseio.com/v0/item/$maxIndex.json?print=pretty")->then(function (Response $response) use (&$maxIndex,&$string,&$count) {
 
                         $item = json_decode($response->getBody());
                         echo $item->id;
                         $count=$count+1;
+                        $maxIndex=$maxIndex-1;
 
                         //$res = $client->get("https://hacker-news.firebaseio.com/v0/user/$item->by.json?print=pretty");
                         // $user = json_decode($res->getBody());
@@ -263,7 +264,7 @@ class AutochekParallelController extends Controller
         };
 
 
-        $pool = new Pool($client, $requests(),['concurrency' => 5]);
+        $pool = new Pool($client, $requests());
         // Initiate the transfers and create a promise
         $promise = $pool->promise();
         // Force the pool of requests to complete.
